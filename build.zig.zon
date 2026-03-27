@@ -1,6 +1,7 @@
 .{
     .name = "opusfile",
     .version = "0.0.0",
+    .mach_zig_version = "2024.11.0-mach",
     .paths = .{
         "include",
         "src",
@@ -13,7 +14,7 @@
     },
     .dependencies = .{
         .opus = .{
-            .url = "https://pkg.hexops.org/opus/c15a0c4c0b7cc2028a8f953588cfafe827b8b608.tar.gz",
+            .url = "https://pkg.hexops.org/pkg/hexops/opus/c15a0c4c0b7cc2028a8f953588cfafe827b8b608.tar.gz",
             .hash = "1220c5f74686b95ba088b4349592b61d8b0cd91294a4a7ace5bb7d2398059062f109",
         },
     },

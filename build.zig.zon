@@ -1,7 +1,8 @@
 .{
-    .name = "opusenc",
+    .name = .opusenc,
+    .fingerprint = 0xc2d1f17e8d59495f, // Changing this has security and trust implications.
     .version = "0.0.0",
-    .mach_zig_version = "2024.11.0-mach",
+    .mach_zig_version = "2026.4.10-mach",
     .paths = .{
         "src",
         "build.zig",
@@ -14,8 +15,8 @@
     },
     .dependencies = .{
         .opus = .{
-            .url = "https://pkg.hexops.org/pkg/hexops/opus/e418a43d6ea2d9fdc03f0e331ab227f73cb2ef93.tar.gz",
-            .hash = "122066858ea2ec3c6e994b01d43a96742cab7bf598c0ecf5c5d1bd109f770dadf723",
+            .url = "https://pkg.hexops.org/pkg/hexops/opus/fe9fe2826cdd6e7b6ff601acaea64301049cf069.tar.gz",
+            .hash = "opus-0.1.0-p727eGhSfABlXN4S2K7NDfBO9zGCBP13rrZZH30woT6e",
         },
     },
 }

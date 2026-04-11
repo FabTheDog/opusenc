@@ -6,16 +6,18 @@ pub fn build(b: *std.Build) void {
 
     const opus_dep = b.dependency("opus", .{ .target = target, .optimize = optimize });
 
-    const lib = b.addStaticLibrary(.{
+    const lib = b.addLibrary(.{
         .name = "opusenc",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
     });
-    lib.linkLibC();
-    lib.linkLibrary(opus_dep.artifact("opus"));
-    lib.addIncludePath(b.path("include"));
-    lib.addIncludePath(b.path("src"));
-    lib.addCSourceFiles(.{ .files = &sources, .flags = &.{
+    lib.root_module.linkLibrary(opus_dep.artifact("opus"));
+    lib.root_module.addIncludePath(b.path("include"));
+    lib.root_module.addIncludePath(b.path("src"));
+    lib.root_module.addCSourceFiles(.{ .files = &sources, .flags = &.{
         "-DHAVE_CONFIG_H",
         "-DOUTSIDE_SPEEX",
         "-DRANDOM_PREFIX=MACH",
@@ -25,7 +27,7 @@ pub fn build(b: *std.Build) void {
         .PACKAGE_NAME = "opusenc",
         .PACKAGE_VERSION = "0.1",
     });
-    lib.addConfigHeader(config_header);
+    lib.root_module.addConfigHeader(config_header);
     b.installArtifact(lib);
 }
 

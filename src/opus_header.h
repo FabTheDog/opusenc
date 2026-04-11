@@ -93,4 +93,6 @@ int opeint_comment_add(char **comments, int* length, const char *tag, const char
 
 void opeint_comment_pad(char **comments, int* length, int amount);
 
+unsigned int get_random_uint32(void);
+
 #endif

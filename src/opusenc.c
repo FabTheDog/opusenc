@@ -357,7 +357,7 @@ fail:
 }
 
 static void stream_generate_serialno(EncStream *stream) {
-  stream->serialno = rand();
+  stream->serialno = (int)get_random_uint32();
   stream->serialno_is_set = 1;
 }
 
@@ -529,6 +529,7 @@ static void init_stream(OggOpusEnc *enc) {
     oggp_set_muxing_delay(enc->oggp, enc->max_ogg_delay);
   }
   opeint_comment_pad(&enc->streams->comment, &enc->streams->comment_length, enc->comment_padding);
+  enc->streams->header_is_frozen = 1;
 
   /* Get preskip at the last minute (when it can no longer change). */
   if (enc->global_granule_offset == -1) {
@@ -658,8 +659,8 @@ static void encode_buffer(OggOpusEnc *enc) {
       }
       if (e_o_s) {
         EncStream *tmp;
-        tmp = enc->streams->next;
         if (enc->streams->close_at_end && !enc->pull_api) {
+          enc->streams->close_at_end = 0;
           ret = enc->callbacks.close(enc->streams->user_data);
           if (ret) {
             enc->unrecoverable = OPE_CLOSE_FAIL;
@@ -667,10 +668,11 @@ static void encode_buffer(OggOpusEnc *enc) {
             return;
           }
         }
+        tmp = enc->streams->next;
         stream_destroy(enc->streams);
         enc->streams = tmp;
-        if (!tmp) enc->last_stream = NULL;
-        if (enc->last_stream == NULL) {
+        if (!tmp) {
+          enc->last_stream = NULL;
           free(packet_copy);
           return;
         }
@@ -682,6 +684,10 @@ static void encode_buffer(OggOpusEnc *enc) {
           enc->streams->granule_offset -= enc->frame_size;
         }
         init_stream(enc);
+        if (enc->unrecoverable) {
+          free(packet_copy);
+          return;
+        }
         if (enc->chaining_keyframe) {
           unsigned char *p;
           opus_int64 granulepos2=enc->curr_granule - enc->streams->granule_offset - enc->frame_size;
@@ -875,8 +881,14 @@ void ope_encoder_destroy(OggOpusEnc *enc) {
 
 /* Ends the stream and create a new stream within the same file. */
 int ope_encoder_chain_current(OggOpusEnc *enc, OggOpusComments *comments) {
-  enc->last_stream->close_at_end = 0;
-  return ope_encoder_continue_new_callbacks(enc, enc->last_stream->user_data, comments);
+  EncStream *prev_stream = enc->last_stream;
+  int ret = ope_encoder_continue_new_callbacks(enc, prev_stream->user_data, comments);
+  if (ret != OPE_OK) return ret;
+  prev_stream->close_at_end = 0;
+  if (!prev_stream->serialno_is_set) stream_generate_serialno(prev_stream);
+  enc->last_stream->serialno = (int)((unsigned int)prev_stream->serialno + 1);
+  enc->last_stream->serialno_is_set = 1;
+  return OPE_OK;
 }
 
 /* Ends the stream and create a new file. */
@@ -914,10 +926,12 @@ int ope_encoder_continue_new_callbacks(OggOpusEnc *enc, void *user_data, OggOpus
 
 int ope_encoder_flush_header(OggOpusEnc *enc) {
   if (enc->unrecoverable) return enc->unrecoverable;
-  if (enc->last_stream->header_is_frozen) return OPE_TOO_LATE;
-  if (enc->last_stream->stream_is_init) return OPE_TOO_LATE;
-  else init_stream(enc);
-  return OPE_OK;
+  /* With chained streams, this function only ensures that the initial
+     headers have been written.  Headers for additional chained streams
+     will be written as soon as we have enough audio to close out the
+     previous stream in the chain, or when the chain is drained. */
+  if (enc->streams != NULL && !enc->streams->stream_is_init) init_stream(enc);
+  return enc->unrecoverable;
 }
 
 /* Goes straight to the libopus ctl() functions. */
@@ -945,6 +959,9 @@ int ope_encoder_ctl(OggOpusEnc *enc, int request, ...) {
     case OPUS_SET_PREDICTION_DISABLED_REQUEST:
 #ifdef OPUS_SET_PHASE_INVERSION_DISABLED_REQUEST
     case OPUS_SET_PHASE_INVERSION_DISABLED_REQUEST:
+#endif
+#ifdef OPUS_SET_QEXT_REQUEST
+    case OPUS_SET_QEXT_REQUEST:
 #endif
     {
       opus_int32 value = va_arg(ap, opus_int32);
@@ -991,6 +1008,9 @@ int ope_encoder_ctl(OggOpusEnc *enc, int request, ...) {
     case OPUS_GET_PREDICTION_DISABLED_REQUEST:
 #ifdef OPUS_GET_PHASE_INVERSION_DISABLED_REQUEST
     case OPUS_GET_PHASE_INVERSION_DISABLED_REQUEST:
+#endif
+#ifdef OPUS_GET_QEXT_REQUEST
+    case OPUS_GET_QEXT_REQUEST:
 #endif
     {
       opus_int32 *value = va_arg(ap, opus_int32*);

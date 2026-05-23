@@ -28,6 +28,22 @@ pub fn build(b: *std.Build) void {
         .PACKAGE_VERSION = "0.1",
     });
     lib.root_module.addConfigHeader(config_header);
+
+    // iOS targets require the iOS SDK sysroot (libc headers are not bundled
+    // with Zig). Pull the headers, frameworks, and stub libs from the bundled
+    // `xcode_frameworks` package so the C sources can find <string.h> etc.
+    if (target.result.os.tag == .ios) {
+        if (b.lazyDependency("xcode_frameworks", .{
+            .target = target,
+            .optimize = optimize,
+        })) |dep| {
+            const subdir = if (target.result.abi == .simulator) "iphonesimulator" else "iphoneos";
+            lib.root_module.addSystemFrameworkPath(dep.path(b.fmt("{s}/Frameworks", .{subdir})));
+            lib.root_module.addSystemIncludePath(dep.path(b.fmt("{s}/include", .{subdir})));
+            lib.root_module.addLibraryPath(dep.path(b.fmt("{s}/lib", .{subdir})));
+        }
+    }
+
     b.installArtifact(lib);
 }
 

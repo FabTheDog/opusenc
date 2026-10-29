@@ -15,7 +15,7 @@
     },
     .dependencies = .{
         .opus = .{
-            .url = "https://pkg.hexops.org/pkg/hexops/opus/15bf1fa44babaca84d8a79ec1e1e58f268a4d0b2.tar.gz",
+            .url = "https://github.com/FabTheDog/opus/archive/15bf1fa44babaca84d8a79ec1e1e58f268a4d0b2.tar.gz",
             .hash = "opus-0.1.0-p727eJVWfACb8f2krqkaADi6gRkvBLKBwLaPz-ZE40n2",
         },
         .xcode_frameworks = .{
